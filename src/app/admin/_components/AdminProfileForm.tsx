@@ -1009,14 +1009,14 @@ function CardInPhone({ card, compact }: { card: CardData; compact: boolean }) {
       {/* Social dots — original brand icons */}
       {!compact && (card.linkedin || card.instagram || card.twitter || card.facebook || card.tiktok || card.telegram || card.youtube) && (
         <div className="mt-3 flex justify-center gap-2 px-4 flex-wrap">
-          {card.linkedin && <SocialDot Icon={FaLinkedinIn} bg="#0a66c2" />}
-          {card.instagram && <SocialDot Icon={FaInstagram} bg="#e1306c" />}
-          {card.twitter && <SocialDot Icon={FaXTwitter} bg="#000000" />}
-          {card.facebook && <SocialDot Icon={FaFacebookF} bg="#1877f2" />}
-          {card.youtube && <SocialDot Icon={FaYoutube} bg="#ff0000" />}
-          {card.tiktok && <SocialDot Icon={FaTiktok} bg="#010101" />}
-          {card.whatsapp && <SocialDot Icon={FaWhatsapp} bg="#25d366" />}
-          {card.telegram && <SocialDot Icon={FaTelegram} bg="#229ed9" />}
+          {card.linkedin && <SocialDot Icon={FaLinkedinIn} bg={card.brandColor} />}
+          {card.instagram && <SocialDot Icon={FaInstagram} bg={card.brandColor} />}
+          {card.twitter && <SocialDot Icon={FaXTwitter} bg={card.brandColor} />}
+          {card.facebook && <SocialDot Icon={FaFacebookF} bg={card.brandColor} />}
+          {card.youtube && <SocialDot Icon={FaYoutube} bg={card.brandColor} />}
+          {card.tiktok && <SocialDot Icon={FaTiktok} bg={card.brandColor} />}
+          {card.whatsapp && <SocialDot Icon={FaWhatsapp} bg={card.brandColor} />}
+          {card.telegram && <SocialDot Icon={FaTelegram} bg={card.brandColor} />}
         </div>
       )}
 

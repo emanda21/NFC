@@ -110,16 +110,15 @@ export default function PublicCard({ profile }: { profile: Profile }) {
               {profile.social_links.map((link, i) => {
                 const p = link.platform.toLowerCase();
                 let Icon = FaFacebookF;
-                let bg = "#1877f2";
 
-                if (p.includes("linkedin"))   { Icon = FaLinkedinIn; bg = "#0a66c2"; }
-                else if (p.includes("instagram")) { Icon = FaInstagram; bg = "#e1306c"; }
-                else if (p.includes("twitter") || p.includes("x")) { Icon = FaXTwitter; bg = "#000000"; }
-                else if (p.includes("facebook"))  { Icon = FaFacebookF; bg = "#1877f2"; }
-                else if (p.includes("youtube"))   { Icon = FaYoutube; bg = "#ff0000"; }
-                else if (p.includes("tiktok"))    { Icon = FaTiktok; bg = "#010101"; }
-                else if (p.includes("whatsapp"))  { Icon = FaWhatsapp; bg = "#25d366"; }
-                else if (p.includes("telegram"))  { Icon = FaTelegram; bg = "#229ed9"; }
+                if (p.includes("linkedin"))   { Icon = FaLinkedinIn; }
+                else if (p.includes("instagram")) { Icon = FaInstagram; }
+                else if (p.includes("twitter") || p.includes("x")) { Icon = FaXTwitter; }
+                else if (p.includes("facebook"))  { Icon = FaFacebookF; }
+                else if (p.includes("youtube"))   { Icon = FaYoutube; }
+                else if (p.includes("tiktok"))    { Icon = FaTiktok; }
+                else if (p.includes("whatsapp"))  { Icon = FaWhatsapp; }
+                else if (p.includes("telegram"))  { Icon = FaTelegram; }
 
                 return (
                   <a
@@ -128,7 +127,7 @@ export default function PublicCard({ profile }: { profile: Profile }) {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex h-12 w-12 items-center justify-center rounded-full shadow-sm transition-transform hover:scale-110"
-                    style={{ backgroundColor: bg }}
+                    style={{ backgroundColor: brandColor }}
                     title={link.platform}
                   >
                     <Icon size={22} color="#ffffff" />
