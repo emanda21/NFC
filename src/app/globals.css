@@ -1,0 +1,47 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  /* ── Daris NFC Brand Base: Deep Burgundy background, White text ── */
+  body {
+    @apply text-white;
+    background-color: #3d1313;
+  }
+
+  /* Custom slim scrollbar — burgundy-themed */
+  ::-webkit-scrollbar        { width: 5px; }
+  ::-webkit-scrollbar-track  { background: #2a0c0c; }
+  ::-webkit-scrollbar-thumb  { background: #d4af37; border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: #e8c84a; }
+
+  /* Remove default outline – we handle focus rings ourselves */
+  *:focus { outline: none; }
+}
+
+@layer utilities {
+  /* Hides scrollbar while keeping scroll functionality */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Daris NFC utility shortcuts */
+  .bg-brand-burgundy   { background-color: #3d1313; }
+  .bg-brand-gold       { background-color: #d4af37; }
+  .text-brand-gold     { color: #d4af37; }
+  .border-brand-gold   { border-color: #d4af37; }
+  .ring-brand-gold     { --tw-ring-color: #d4af37; }
+}
