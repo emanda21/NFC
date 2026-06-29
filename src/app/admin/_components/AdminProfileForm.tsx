@@ -69,9 +69,9 @@ const INITIAL_CARD: CardData = {
    CONSTANTS & BRAND TOKENS
 ═══════════════════════════════════════════════════════════════════════════ */
 
-const BP  = "#3d1313"; // Deep Burgundy
+const BP = "#3d1313"; // Deep Burgundy
 const BPL = "#4a1c1c"; // Lighter Burgundy
-const BG  = "#d4af37"; // Luxury Gold
+const BG = "#d4af37"; // Luxury Gold
 const BGL = "#e8c84a"; // Gold Light
 
 /** Types that show Company Logo in the main avatar circle */
@@ -83,11 +83,11 @@ const PRESET_COLORS = [
 ];
 
 const PROFILE_TYPES: { value: ProfileType; label: string; emoji: string }[] = [
-  { value: "individual",  label: "Individual",  emoji: "👤" },
-  { value: "business",    label: "Business",    emoji: "🏢" },
-  { value: "hotel",       label: "Hotel",       emoji: "🏨" },
-  { value: "restaurant",  label: "Restaurant",  emoji: "🍽️" },
-  { value: "legal",       label: "Legal",       emoji: "⚖️" },
+  { value: "individual", label: "Individual", emoji: "👤" },
+  { value: "business", label: "Business", emoji: "🏢" },
+  { value: "hotel", label: "Hotel", emoji: "🏨" },
+  { value: "restaurant", label: "Restaurant", emoji: "🍽️" },
+  { value: "legal", label: "Legal", emoji: "⚖️" },
 ];
 
 type SocialKey = "linkedin" | "instagram" | "twitter" | "facebook" | "youtube" | "tiktok" | "whatsapp" | "telegram";
@@ -101,14 +101,14 @@ interface SocialFieldDef {
 }
 
 const SOCIAL_FIELDS: SocialFieldDef[] = [
-  { key: "linkedin",  Icon: FaLinkedinIn,  iconBg: "#0a66c2", label: "LinkedIn",    placeholder: "https://linkedin.com/in/username"  },
-  { key: "instagram", Icon: FaInstagram,   iconBg: "#e1306c", label: "Instagram",   placeholder: "https://instagram.com/username"    },
-  { key: "twitter",   Icon: FaXTwitter,    iconBg: "#000000", label: "Twitter / X", placeholder: "https://x.com/username"            },
-  { key: "facebook",  Icon: FaFacebookF,   iconBg: "#1877f2", label: "Facebook",    placeholder: "https://facebook.com/username"     },
-  { key: "youtube",   Icon: FaYoutube,     iconBg: "#ff0000", label: "YouTube",     placeholder: "https://youtube.com/@channel"      },
-  { key: "tiktok",    Icon: FaTiktok,      iconBg: "#010101", label: "TikTok",      placeholder: "https://tiktok.com/@username"      },
-  { key: "whatsapp",  Icon: FaWhatsapp,    iconBg: "#25d366", label: "WhatsApp",    placeholder: "https://wa.me/971500000000"        },
-  { key: "telegram",  Icon: FaTelegram,    iconBg: "#229ed9", label: "Telegram",    placeholder: "https://t.me/username"            },
+  { key: "linkedin", Icon: FaLinkedinIn, iconBg: "#0a66c2", label: "LinkedIn", placeholder: "https://linkedin.com/in/username" },
+  { key: "instagram", Icon: FaInstagram, iconBg: "#e1306c", label: "Instagram", placeholder: "https://instagram.com/username" },
+  { key: "twitter", Icon: FaXTwitter, iconBg: "#000000", label: "Twitter / X", placeholder: "https://x.com/username" },
+  { key: "facebook", Icon: FaFacebookF, iconBg: "#1877f2", label: "Facebook", placeholder: "https://facebook.com/username" },
+  { key: "youtube", Icon: FaYoutube, iconBg: "#ff0000", label: "YouTube", placeholder: "https://youtube.com/@channel" },
+  { key: "tiktok", Icon: FaTiktok, iconBg: "#010101", label: "TikTok", placeholder: "https://tiktok.com/@username" },
+  { key: "whatsapp", Icon: FaWhatsapp, iconBg: "#25d366", label: "WhatsApp", placeholder: "https://wa.me/971500000000" },
+  { key: "telegram", Icon: FaTelegram, iconBg: "#229ed9", label: "Telegram", placeholder: "https://t.me/username" },
 ];
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -135,9 +135,9 @@ export default function AdminProfileForm() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const [card,      setCard]      = useState<CardData>(INITIAL_CARD);
+  const [card, setCard] = useState<CardData>(INITIAL_CARD);
   const [openField, setOpenField] = useState<string | null>(null);
-  const [error,     setError]     = useState("");
+  const [error, setError] = useState("");
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
 
   /* ── State helpers ── */
@@ -194,25 +194,25 @@ export default function AdminProfileForm() {
 
     startTransition(async () => {
       const ci: ContactInfo = {};
-      if (card.email)      ci.email      = card.email;
-      if (card.phone)      ci.phone      = card.phone;
-      if (card.website)    ci.website    = card.website;
-      if (card.address)    ci.address    = card.address;
-      if (card.jobTitle)   ci.job_title  = card.jobTitle;
-      if (card.company)    ci.company    = card.company;
+      if (card.email) ci.email = card.email;
+      if (card.phone) ci.phone = card.phone;
+      if (card.website) ci.website = card.website;
+      if (card.address) ci.address = card.address;
+      if (card.jobTitle) ci.job_title = card.jobTitle;
+      if (card.company) ci.company = card.company;
       if (card.brandColor) ci.brand_color = card.brandColor;
-      if (card.coverUrl)   ci.cover_url  = card.coverUrl;
-      if (card.logoUrl)    ci.logo_url   = card.logoUrl;
+      if (card.coverUrl) ci.cover_url = card.coverUrl;
+      if (card.logoUrl) ci.logo_url = card.logoUrl;
 
       const socialPairs: [string, string][] = [
-        ["LinkedIn",  card.linkedin],
+        ["LinkedIn", card.linkedin],
         ["Instagram", card.instagram],
-        ["Twitter",   card.twitter],
-        ["Facebook",  card.facebook],
-        ["YouTube",   card.youtube],
-        ["TikTok",    card.tiktok],
-        ["WhatsApp",  card.whatsapp],
-        ["Telegram",  card.telegram],
+        ["Twitter", card.twitter],
+        ["Facebook", card.facebook],
+        ["YouTube", card.youtube],
+        ["TikTok", card.tiktok],
+        ["WhatsApp", card.whatsapp],
+        ["Telegram", card.telegram],
       ];
       const sl: SocialLink[] = socialPairs
         .filter(([, url]) => url.trim())
@@ -224,13 +224,13 @@ export default function AdminProfileForm() {
 
       const result = await createProfile({
         profile_type: card.profileType,
-        name:         card.name.trim(),
-        bio:          card.bio.trim() || null,
-        avatar_url:   card.avatarUrl || null,
+        name: card.name.trim(),
+        bio: card.bio.trim() || null,
+        avatar_url: card.avatarUrl || null,
         contact_info: Object.keys(ci).length ? ci : null,
         social_links: sl.length ? sl : null,
         custom_links: cl.length ? cl : null,
-        slug:         card.slug.trim() || undefined,
+        slug: card.slug?.trim() || '',
       });
 
       if (!result.success) {
@@ -890,9 +890,9 @@ function PhonePreview({ card }: { card: CardData }) {
 
       {/* Phone hardware buttons */}
       <div className="absolute rounded-r-sm" style={{ right: -9, top: 110, width: 5, height: 52, backgroundColor: "#222" }} />
-      <div className="absolute rounded-l-sm" style={{ left: -9, top: 80,  width: 5, height: 34, backgroundColor: "#222" }} />
+      <div className="absolute rounded-l-sm" style={{ left: -9, top: 80, width: 5, height: 34, backgroundColor: "#222" }} />
       <div className="absolute rounded-l-sm" style={{ left: -9, top: 124, width: 5, height: 34, backgroundColor: "#222" }} />
-      <div className="absolute rounded-l-sm" style={{ left: -9, top: 62,  width: 5, height: 16, backgroundColor: "#222" }} />
+      <div className="absolute rounded-l-sm" style={{ left: -9, top: 62, width: 5, height: 16, backgroundColor: "#222" }} />
     </div>
   );
 }
@@ -906,7 +906,7 @@ function CardInPhone({ card, compact }: { card: CardData; compact: boolean }) {
   // Dynamic avatar source: business/hotel → logo; individual → profile pic
   const avatarSrc = isBusinessType ? card.logoUrl : card.avatarUrl;
   const initial = card.name ? card.name.charAt(0).toUpperCase() : "?";
-  const coverH  = compact ? 72 : 108;
+  const coverH = compact ? 72 : 108;
   const avatarS = compact ? 48 : 64;
   const avatarOffset = Math.floor(avatarS / 2);
 
@@ -994,10 +994,10 @@ function CardInPhone({ card, compact }: { card: CardData; compact: boolean }) {
       {/* Action icon buttons */}
       {!compact && (card.phone || card.email || card.website || card.whatsapp) && (
         <div className="mt-4 flex justify-center gap-3 px-4 flex-wrap">
-          {card.phone    && <PhoneBtn icon="📞" label="Call"  color={card.brandColor} />}
-          {card.email    && <PhoneBtn icon="✉️" label="Email" color={card.brandColor} />}
-          {card.website  && <PhoneBtn icon="🌐" label="Web"   color={card.brandColor} />}
-          {card.whatsapp && <PhoneBtn icon="💬" label="Chat"  color={card.brandColor} />}
+          {card.phone && <PhoneBtn icon="📞" label="Call" color={card.brandColor} />}
+          {card.email && <PhoneBtn icon="✉️" label="Email" color={card.brandColor} />}
+          {card.website && <PhoneBtn icon="🌐" label="Web" color={card.brandColor} />}
+          {card.whatsapp && <PhoneBtn icon="💬" label="Chat" color={card.brandColor} />}
         </div>
       )}
 
@@ -1009,14 +1009,14 @@ function CardInPhone({ card, compact }: { card: CardData; compact: boolean }) {
       {/* Social dots — original brand icons */}
       {!compact && (card.linkedin || card.instagram || card.twitter || card.facebook || card.tiktok || card.telegram || card.youtube) && (
         <div className="mt-3 flex justify-center gap-2 px-4 flex-wrap">
-          {card.linkedin  && <SocialDot Icon={FaLinkedinIn} bg="#0a66c2" />}
-          {card.instagram && <SocialDot Icon={FaInstagram}  bg="#e1306c" />}
-          {card.twitter   && <SocialDot Icon={FaXTwitter}   bg="#000000" />}
-          {card.facebook  && <SocialDot Icon={FaFacebookF}  bg="#1877f2" />}
-          {card.youtube   && <SocialDot Icon={FaYoutube}    bg="#ff0000" />}
-          {card.tiktok    && <SocialDot Icon={FaTiktok}     bg="#010101" />}
-          {card.whatsapp  && <SocialDot Icon={FaWhatsapp}   bg="#25d366" />}
-          {card.telegram  && <SocialDot Icon={FaTelegram}   bg="#229ed9" />}
+          {card.linkedin && <SocialDot Icon={FaLinkedinIn} bg="#0a66c2" />}
+          {card.instagram && <SocialDot Icon={FaInstagram} bg="#e1306c" />}
+          {card.twitter && <SocialDot Icon={FaXTwitter} bg="#000000" />}
+          {card.facebook && <SocialDot Icon={FaFacebookF} bg="#1877f2" />}
+          {card.youtube && <SocialDot Icon={FaYoutube} bg="#ff0000" />}
+          {card.tiktok && <SocialDot Icon={FaTiktok} bg="#010101" />}
+          {card.whatsapp && <SocialDot Icon={FaWhatsapp} bg="#25d366" />}
+          {card.telegram && <SocialDot Icon={FaTelegram} bg="#229ed9" />}
         </div>
       )}
 
@@ -1143,11 +1143,11 @@ function ExpandableField({
           style={
             isOpen
               ? {
-                  background: `linear-gradient(135deg, ${BGL} 0%, ${BG} 100%)`,
-                  borderColor: BG,
-                  color: BP,
-                  transform: "rotate(45deg)",
-                }
+                background: `linear-gradient(135deg, ${BGL} 0%, ${BG} 100%)`,
+                borderColor: BG,
+                color: BP,
+                transform: "rotate(45deg)",
+              }
               : { borderColor: "#d1d5db", color: "#9ca3af" }
           }
         >
