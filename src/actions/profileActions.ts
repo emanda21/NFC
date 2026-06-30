@@ -17,6 +17,7 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { revalidatePath } from "next/cache";
 import { generateUniqueSlug, toSlug } from "@/utils/slugify";
 import type {
   Profile,
@@ -219,7 +220,7 @@ export async function getAllProfiles(
  */
 export async function updateProfile(
   input: UpdateProfileInput
-): Promise<ActionResult<Profile>> {
+): Promise<ActionResult<Profile | null>> {
   try {
     const supabase = createClient();
 
@@ -251,15 +252,18 @@ export async function updateProfile(
       .from("profiles")
       .update(fields)
       .eq("id", id)
-      .select("*")
-      .single();
+      .select();
 
     if (error) {
       console.error("[updateProfile] Supabase error:", error.message);
       return { success: false, error: error.message };
     }
 
-    return { success: true, data: data as Profile };
+    // Trigger a server-side refresh of the admin page so the client gets the latest list
+    revalidatePath("/admin");
+
+    const updatedProfile = data && data.length > 0 ? (data[0] as Profile) : null;
+    return { success: true, data: updatedProfile };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error occurred.";
     console.error("[updateProfile] Unexpected error:", message);

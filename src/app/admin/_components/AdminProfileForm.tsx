@@ -2,16 +2,38 @@
 
 /**
  * @file src/app/admin/_components/AdminProfileForm.tsx
- * @description Daris NFC — Split-screen Digital Business Card Builder.
- *   Left  (40%): Sticky Deep Burgundy panel with gold-glowing iPhone mockup.
- *   Right (60%): Pure-white grid workspace form builder.
+ * @description Daris NFC — Full Admin Dashboard with CRUD.
+ *
+ * Layout (desktop, 3-column):
+ *   [Left  ~280px] Customer List sidebar  — Cream (#FFFDD0)
+ *   [Center  flex] Card Builder form      — White with grid overlay
+ *   [Right  ~280px] Live Phone Preview    — White (sticky)
+ *
+ * Features:
+ *   • Search customers by name (client-side, real-time)
+ *   • Click customer → populate form (UPDATE mode)
+ *   • "Add New Customer" button → reset form (INSERT mode)
+ *   • Calls createProfile (new) or updateProfile (existing) accordingly
+ *   • In-place list update after save — no full page reload
  */
 
-import React, { useState, useTransition, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { createProfile } from "@/actions/profileActions";
+import React, {
+  useState,
+  useTransition,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
+import { createProfile, updateProfile } from "@/actions/profileActions";
 import { uploadFile } from "@/utils/supabase/storage";
-import type { ProfileType, ContactInfo, CustomLink, SocialLink } from "@/types/profile";
+import type {
+  Profile,
+  ProfileType,
+  ContactInfo,
+  CustomLink,
+  SocialLink,
+} from "@/types/profile";
+import AdminNavbar from "./AdminNavbar";
 import {
   FaLinkedinIn,
   FaInstagram,
@@ -53,6 +75,18 @@ interface CardData {
   slug: string;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   CONSTANTS & BRAND TOKENS
+═══════════════════════════════════════════════════════════════════════════ */
+
+const BP  = "#3d1313"; // Deep Burgundy
+const BPL = "#4a1c1c"; // Lighter Burgundy
+const BG  = "#d4af37"; // Luxury Gold
+const BGL = "#e8c84a"; // Gold Light
+
+const CREAM      = "#FFFDD0";
+const CREAM_DARK = "#F5EDB0"; // slightly darker for hover/active states
+
 const INITIAL_CARD: CardData = {
   name: "", jobTitle: "", company: "", bio: "",
   avatarUrl: "", coverUrl: "", logoUrl: "",
@@ -65,15 +99,6 @@ const INITIAL_CARD: CardData = {
   slug: "",
 };
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   CONSTANTS & BRAND TOKENS
-═══════════════════════════════════════════════════════════════════════════ */
-
-const BP = "#3d1313"; // Deep Burgundy
-const BPL = "#4a1c1c"; // Lighter Burgundy
-const BG = "#d4af37"; // Luxury Gold
-const BGL = "#e8c84a"; // Gold Light
-
 /** Types that show Company Logo in the main avatar circle */
 const LOGO_TYPES: ProfileType[] = ["business", "hotel", "restaurant", "legal"];
 
@@ -83,14 +108,16 @@ const PRESET_COLORS = [
 ];
 
 const PROFILE_TYPES: { value: ProfileType; label: string; emoji: string }[] = [
-  { value: "individual", label: "Individual", emoji: "👤" },
-  { value: "business", label: "Business", emoji: "🏢" },
-  { value: "hotel", label: "Hotel", emoji: "🏨" },
-  { value: "restaurant", label: "Restaurant", emoji: "🍽️" },
-  { value: "legal", label: "Legal", emoji: "⚖️" },
+  { value: "individual",  label: "Individual",  emoji: "👤" },
+  { value: "business",    label: "Business",    emoji: "🏢" },
+  { value: "hotel",       label: "Hotel",       emoji: "🏨" },
+  { value: "restaurant",  label: "Restaurant",  emoji: "🍽️" },
+  { value: "legal",       label: "Legal",       emoji: "⚖️" },
 ];
 
-type SocialKey = "linkedin" | "instagram" | "twitter" | "facebook" | "youtube" | "tiktok" | "whatsapp" | "telegram";
+type SocialKey =
+  | "linkedin" | "instagram" | "twitter" | "facebook"
+  | "youtube"  | "tiktok"   | "whatsapp" | "telegram";
 
 interface SocialFieldDef {
   key: SocialKey;
@@ -101,18 +128,18 @@ interface SocialFieldDef {
 }
 
 const SOCIAL_FIELDS: SocialFieldDef[] = [
-  { key: "linkedin", Icon: FaLinkedinIn, iconBg: "#0a66c2", label: "LinkedIn", placeholder: "https://linkedin.com/in/username" },
-  { key: "instagram", Icon: FaInstagram, iconBg: "#e1306c", label: "Instagram", placeholder: "https://instagram.com/username" },
-  { key: "twitter", Icon: FaXTwitter, iconBg: "#000000", label: "Twitter / X", placeholder: "https://x.com/username" },
-  { key: "facebook", Icon: FaFacebookF, iconBg: "#1877f2", label: "Facebook", placeholder: "https://facebook.com/username" },
-  { key: "youtube", Icon: FaYoutube, iconBg: "#ff0000", label: "YouTube", placeholder: "https://youtube.com/@channel" },
-  { key: "tiktok", Icon: FaTiktok, iconBg: "#010101", label: "TikTok", placeholder: "https://tiktok.com/@username" },
-  { key: "whatsapp", Icon: FaWhatsapp, iconBg: "#25d366", label: "WhatsApp", placeholder: "https://wa.me/971500000000" },
-  { key: "telegram", Icon: FaTelegram, iconBg: "#229ed9", label: "Telegram", placeholder: "https://t.me/username" },
+  { key: "linkedin",  Icon: FaLinkedinIn, iconBg: "#0a66c2", label: "LinkedIn",    placeholder: "https://linkedin.com/in/username" },
+  { key: "instagram", Icon: FaInstagram,  iconBg: "#e1306c", label: "Instagram",   placeholder: "https://instagram.com/username" },
+  { key: "twitter",   Icon: FaXTwitter,   iconBg: "#000000", label: "Twitter / X", placeholder: "https://x.com/username" },
+  { key: "facebook",  Icon: FaFacebookF,  iconBg: "#1877f2", label: "Facebook",    placeholder: "https://facebook.com/username" },
+  { key: "youtube",   Icon: FaYoutube,    iconBg: "#ff0000", label: "YouTube",     placeholder: "https://youtube.com/@channel" },
+  { key: "tiktok",    Icon: FaTiktok,     iconBg: "#010101", label: "TikTok",      placeholder: "https://tiktok.com/@username" },
+  { key: "whatsapp",  Icon: FaWhatsapp,   iconBg: "#25d366", label: "WhatsApp",    placeholder: "https://wa.me/971500000000" },
+  { key: "telegram",  Icon: FaTelegram,   iconBg: "#229ed9", label: "Telegram",    placeholder: "https://t.me/username" },
 ];
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SHARED STYLES — white workspace
+   SHARED STYLES
 ═══════════════════════════════════════════════════════════════════════════ */
 
 const INPUT_CLS =
@@ -128,17 +155,112 @@ function cx(...cls: (string | false | null | undefined)[]): string {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   HELPERS — Profile ↔ CardData mapping
+═══════════════════════════════════════════════════════════════════════════ */
+
+/** Map a social platform name (e.g. "LinkedIn") to the CardData key. */
+function platformToKey(platform: string): SocialKey | null {
+  const map: Record<string, SocialKey> = {
+    linkedin:  "linkedin",  LinkedIn:  "linkedin",
+    instagram: "instagram", Instagram: "instagram",
+    twitter:   "twitter",   Twitter:   "twitter",   "Twitter / X": "twitter",
+    facebook:  "facebook",  Facebook:  "facebook",
+    youtube:   "youtube",   YouTube:   "youtube",
+    tiktok:    "tiktok",    TikTok:    "tiktok",
+    whatsapp:  "whatsapp",  WhatsApp:  "whatsapp",
+    telegram:  "telegram",  Telegram:  "telegram",
+  };
+  return map[platform] ?? null;
+}
+
+/** Convert a Supabase Profile row into a CardData object for the form. */
+function profileToCardData(p: Profile): CardData {
+  const ci = p.contact_info ?? {};
+  const card: CardData = {
+    name:        p.name,
+    jobTitle:    ci.job_title   ?? "",
+    company:     ci.company     ?? "",
+    bio:         p.bio          ?? "",
+    avatarUrl:   p.avatar_url   ?? "",
+    coverUrl:    ci.cover_url   ?? "",
+    logoUrl:     ci.logo_url    ?? "",
+    email:       ci.email       ?? "",
+    phone:       ci.phone       ?? "",
+    website:     ci.website     ?? "",
+    address:     ci.address     ?? "",
+    linkedin:    "",
+    instagram:   "",
+    twitter:     "",
+    facebook:    "",
+    youtube:     "",
+    tiktok:      "",
+    whatsapp:    "",
+    telegram:    "",
+    profileType: p.profile_type,
+    customLinks: p.custom_links?.length
+      ? p.custom_links.map(l => ({ title: l.title, url: l.url }))
+      : [{ title: "", url: "" }],
+    brandColor:  ci.brand_color ?? "#3d1313",
+    slug:        p.slug,
+  };
+
+  // Map social links back to their respective fields
+  if (p.social_links) {
+    for (const sl of p.social_links) {
+      const key = platformToKey(sl.platform);
+      if (key) card[key] = sl.url;
+    }
+  }
+
+  return card;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PROFILE_TYPE BADGE colors (for list sidebar)
+═══════════════════════════════════════════════════════════════════════════ */
+
+const TYPE_BADGE: Record<ProfileType, { bg: string; text: string; emoji: string }> = {
+  individual:  { bg: "#e8f5e9", text: "#2e7d32", emoji: "👤" },
+  business:    { bg: "#e3f2fd", text: "#1565c0", emoji: "🏢" },
+  hotel:       { bg: "#fce4ec", text: "#c62828", emoji: "🏨" },
+  restaurant:  { bg: "#fff3e0", text: "#e65100", emoji: "🍽️" },
+  legal:       { bg: "#f3e5f5", text: "#6a1b9a", emoji: "⚖️" },
+};
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════════════════════════════ */
+
+interface ToastState {
+  type: "success" | "error";
+  message: string;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    MAIN COMPONENT
 ═══════════════════════════════════════════════════════════════════════════ */
 
-export default function AdminProfileForm() {
-  const router = useRouter();
+interface AdminDashboardProps {
+  initialProfiles: Profile[];
+}
+
+export default function AdminDashboard({ initialProfiles }: AdminDashboardProps) {
   const [isPending, startTransition] = useTransition();
 
-  const [card, setCard] = useState<CardData>(INITIAL_CARD);
+  // ── Form state ─────────────────────────────────────────────────────────
+  const [card, setCard]           = useState<CardData>(INITIAL_CARD);
+  const [editingId, setEditingId] = useState<string | null>(null); // null = new
   const [openField, setOpenField] = useState<string | null>(null);
-  const [error, setError] = useState("");
+  const [error, setError]         = useState("");
+  const [toast, setToast]         = useState<ToastState | null>(null);
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
+
+  // ── Dashboard / list state ─────────────────────────────────────────────
+  const [profiles, setProfiles]   = useState<Profile[]>(initialProfiles);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Mobile view: "list" | "form"
+  const [mobileView, setMobileView] = useState<"list" | "form">("list");
 
   /* ── State helpers ── */
   const update = useCallback(
@@ -162,6 +284,39 @@ export default function AdminProfileForm() {
   const removeCL = (i: number) =>
     setCard(prev => ({ ...prev, customLinks: prev.customLinks.filter((_, j) => j !== i) }));
 
+  /* ── Load a profile into the form (EDIT mode) ── */
+  const loadProfile = useCallback((p: Profile) => {
+    setEditingId(p.id);
+    setCard(profileToCardData(p));
+    setError("");
+    setToast(null);
+    setOpenField(null);
+    setMobileView("form");
+  }, []);
+
+  /* ── Reset to blank form (CREATE mode) ── */
+  const resetForm = useCallback(() => {
+    setEditingId(null);
+    setCard(INITIAL_CARD);
+    setError("");
+    setToast(null);
+    setOpenField(null);
+    setMobileView("form");
+  }, []);
+
+  /* ── Filtered list ── */
+  const filteredProfiles = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return profiles;
+    return profiles.filter(p => p.name.toLowerCase().includes(q));
+  }, [profiles, searchQuery]);
+
+  /* ── Toast helper ── */
+  const showToast = (type: "success" | "error", message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   /* ── File Upload ── */
   const handleFileUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -183,184 +338,353 @@ export default function AdminProfileForm() {
     }
   };
 
-  /* ── Submit ── */
+  /* ── Build payload ── */
+  const buildPayload = () => {
+    const ci: ContactInfo = {};
+    if (card.email)     ci.email       = card.email;
+    if (card.phone)     ci.phone       = card.phone;
+    if (card.website)   ci.website     = card.website;
+    if (card.address)   ci.address     = card.address;
+    if (card.jobTitle)  ci.job_title   = card.jobTitle;
+    if (card.company)   ci.company     = card.company;
+    if (card.brandColor) ci.brand_color = card.brandColor;
+    if (card.coverUrl)  ci.cover_url   = card.coverUrl;
+    if (card.logoUrl)   ci.logo_url    = card.logoUrl;
+
+    const socialPairs: [string, string][] = [
+      ["LinkedIn",    card.linkedin],
+      ["Instagram",   card.instagram],
+      ["Twitter",     card.twitter],
+      ["Facebook",    card.facebook],
+      ["YouTube",     card.youtube],
+      ["TikTok",      card.tiktok],
+      ["WhatsApp",    card.whatsapp],
+      ["Telegram",    card.telegram],
+    ];
+    const sl: SocialLink[] = socialPairs
+      .filter(([, url]) => url.trim())
+      .map(([platform, url]) => ({ platform, url }));
+
+    const cl: CustomLink[] = card.customLinks.filter(
+      l => l.title.trim() && l.url.trim()
+    );
+
+    return {
+      profile_type: card.profileType,
+      name:         card.name.trim(),
+      bio:          card.bio.trim() || null,
+      avatar_url:   card.avatarUrl || null,
+      contact_info: Object.keys(ci).length ? ci : null,
+      social_links: sl.length ? sl : null,
+      custom_links: cl.length ? cl : null,
+      slug:         card.slug?.trim() || undefined,
+    };
+  };
+
+  /* ── Submit (INSERT or UPDATE) ── */
   const handleSave = () => {
     setError("");
     if (!card.name.trim()) {
-      setError("A name is required to create your card.");
+      setError("A name is required.");
       setOpenField("name");
       return;
     }
 
     startTransition(async () => {
-      const ci: ContactInfo = {};
-      if (card.email) ci.email = card.email;
-      if (card.phone) ci.phone = card.phone;
-      if (card.website) ci.website = card.website;
-      if (card.address) ci.address = card.address;
-      if (card.jobTitle) ci.job_title = card.jobTitle;
-      if (card.company) ci.company = card.company;
-      if (card.brandColor) ci.brand_color = card.brandColor;
-      if (card.coverUrl) ci.cover_url = card.coverUrl;
-      if (card.logoUrl) ci.logo_url = card.logoUrl;
+      const payload = buildPayload();
 
-      const socialPairs: [string, string][] = [
-        ["LinkedIn", card.linkedin],
-        ["Instagram", card.instagram],
-        ["Twitter", card.twitter],
-        ["Facebook", card.facebook],
-        ["YouTube", card.youtube],
-        ["TikTok", card.tiktok],
-        ["WhatsApp", card.whatsapp],
-        ["Telegram", card.telegram],
-      ];
-      const sl: SocialLink[] = socialPairs
-        .filter(([, url]) => url.trim())
-        .map(([platform, url]) => ({ platform, url }));
+      if (editingId) {
+        /* ── UPDATE existing profile ── */
+        const result = await updateProfile({ id: editingId, ...payload });
 
-      const cl: CustomLink[] = card.customLinks.filter(
-        l => l.title.trim() && l.url.trim()
-      );
+        if (!result.success) {
+          setError(result.error);
+          return;
+        }
 
-      const result = await createProfile({
-        profile_type: card.profileType,
-        name: card.name.trim(),
-        bio: card.bio.trim() || null,
-        avatar_url: card.avatarUrl || null,
-        contact_info: Object.keys(ci).length ? ci : null,
-        social_links: sl.length ? sl : null,
-        custom_links: cl.length ? cl : null,
-        slug: card.slug?.trim() || '',
-      });
+        if (result.data) {
+          // Refresh the card slug in form (in case it changed)
+          setCard(prev => ({ ...prev, slug: result.data!.slug }));
 
-      if (!result.success) {
-        setError(result.error);
-        return;
+          // Update the profile in the local list
+          setProfiles(prev =>
+            prev.map(p => (p.id === editingId ? result.data! : p))
+          );
+        } else {
+          // If no data is returned (e.g., due to RLS), optimistically update the local list
+          const optimisticProfile = {
+             ...payload,
+             id: editingId,
+             created_at: new Date().toISOString(), // keep a fallback
+          } as Profile;
+          
+          setProfiles(prev =>
+            prev.map(p => (p.id === editingId ? { ...p, ...optimisticProfile } : p))
+          );
+        }
+
+        showToast("success", "Profile Updated Successfully!");
+      } else {
+        /* ── CREATE new profile ── */
+        const result = await createProfile(payload);
+
+        if (!result.success) {
+          setError(result.error);
+          return;
+        }
+
+        // Switch to edit mode for the newly-created profile
+        setEditingId(result.data.id);
+        setCard(prev => ({ ...prev, slug: result.data.slug }));
+
+        // Re-fetch is expensive; optimistically add a minimal entry to the list
+        const newProfile: Profile = {
+          id:           result.data.id,
+          slug:         result.data.slug,
+          profile_type: card.profileType,
+          name:         card.name.trim(),
+          bio:          card.bio.trim() || null,
+          avatar_url:   card.avatarUrl || null,
+          contact_info: buildPayload().contact_info ?? null,
+          social_links: buildPayload().social_links ?? null,
+          custom_links: buildPayload().custom_links ?? null,
+          created_at:   new Date().toISOString(),
+        };
+        setProfiles(prev => [newProfile, ...prev]);
+
+        showToast("success", `"${card.name.trim()}" created! Slug: /p/${result.data.slug}`);
       }
-      router.push(`/p/${result.data.slug}`);
     });
   };
 
   const isBusinessType = LOGO_TYPES.includes(card.profileType);
 
-  /* ── Render ── */
+  /* ════════════════════════════════════════════════════════════════════════
+     RENDER
+  ════════════════════════════════════════════════════════════════════════ */
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#ffffff" }}>
+    <div className="min-h-screen bg-white">
 
-      {/* ═══ HEADER ══════════════════════════════════════════════════════════ */}
-      <header
-        className="sticky top-0 z-50 flex h-16 items-center gap-4 px-6 backdrop-blur-md"
-        style={{ backgroundColor: BP, borderBottom: `1px solid ${BG}22` }}
-      >
-        {/* Logo */}
-        <div className="flex items-center gap-2.5">
-          <div
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-sm font-black shadow-md"
-            style={{
-              background: `linear-gradient(135deg, ${BGL} 0%, ${BG} 100%)`,
-              color: BP,
-            }}
-          >
-            D
-          </div>
-          <span className="text-lg font-black tracking-tight text-white">
-            Daris<span style={{ color: BG }}>NFC</span>
-          </span>
-        </div>
+      {/* ═══ FIXED TOP NAVBAR ═══════════════════════════════════════════════ */}
+      <AdminNavbar
+        cardName={card.name || undefined}
+        isEditing={!!editingId}
+      />
 
-        {/* Breadcrumb */}
-        <nav className="ml-3 flex items-center gap-1.5 text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
-          <span>Admin</span>
-          <span style={{ color: "rgba(255,255,255,0.25)" }}>/</span>
-          <span className="font-semibold text-white">New Card</span>
-        </nav>
+      {/* ═══ BODY — starts below fixed navbar (pt-16) ═══════════════════════ */}
+      <div className="flex pt-16" style={{ minHeight: "100vh" }}>
 
-        {/* Right slot */}
-        <div className="ml-auto flex items-center gap-3">
-          <span className="hidden text-xs sm:block" style={{ color: "rgba(255,255,255,0.45)" }}>
-            {card.name || "Untitled Card"}
-          </span>
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-black overflow-hidden"
-            style={{ backgroundColor: BPL, color: BG, border: `2px solid ${BG}` }}
-          >
-            {card.avatarUrl ? (
-              <img src={card.avatarUrl} alt="" className="w-full h-full object-cover" />
-            ) : "A"}
-          </div>
-        </div>
-      </header>
-
-      {/* ═══ BODY ════════════════════════════════════════════════════════════ */}
-      <div className="flex" style={{ minHeight: "calc(100vh - 4rem)" }}>
-
-        {/* ─── LEFT PANEL: Deep Burgundy Phone Preview ─────────────────────── */}
+        {/* ─── LEFT SIDEBAR: Customer List (Cream) ─────────────────────────── */}
         <aside
-          className="sticky top-16 hidden w-[40%] shrink-0 flex-col items-center justify-center gap-5 overflow-hidden lg:flex"
+          id="customer-list-sidebar"
+          className={cx(
+            "shrink-0 flex flex-col border-r overflow-hidden",
+            "w-full lg:w-72 xl:w-80",
+            // On mobile: show only when mobileView === "list"
+            mobileView === "list" ? "flex" : "hidden lg:flex"
+          )}
           style={{
+            backgroundColor: CREAM,
+            borderColor: "#e5d58e",
             height: "calc(100vh - 4rem)",
-            background: `linear-gradient(145deg, ${BPL} 0%, ${BP} 40%, #2a0c0c 70%, #1a0808 100%)`,
+            position: "sticky",
+            top: "4rem",
           }}
         >
-          {/* Gold decorative blobs */}
+          {/* Sidebar header */}
           <div
-            className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 rounded-full"
-            style={{ background: `radial-gradient(circle, ${BG}20 0%, transparent 70%)` }}
-          />
-          <div
-            className="pointer-events-none absolute -bottom-16 -left-16 h-64 w-64 rounded-full"
-            style={{ background: `radial-gradient(circle, ${BG}12 0%, transparent 70%)` }}
-          />
-          {/* Subtle grid overlay */}
-          <div className="pointer-events-none absolute inset-0 opacity-5">
-            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <pattern id="grid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#grid)" />
-            </svg>
-          </div>
-
-          <p
-            className="relative z-10 text-[10px] font-black uppercase tracking-[0.3em]"
-            style={{ color: `${BG}99` }}
+            className="px-4 pt-5 pb-3 shrink-0"
+            style={{ borderBottom: `1px solid #e5d58e` }}
           >
-            Live Preview
-          </p>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-black uppercase tracking-widest text-gray-700">
+                Customers
+              </h2>
+              <span
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style={{ backgroundColor: `${BP}18`, color: BP }}
+              >
+                {profiles.length}
+              </span>
+            </div>
 
-          <div className="relative z-10">
-            <PhonePreview card={card} />
+            {/* Search input */}
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+                🔍
+              </span>
+              <input
+                id="customer-search"
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search by name…"
+                className="w-full rounded-xl border border-yellow-200 bg-white pl-9 pr-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#3d1313] focus:ring-2 focus:ring-[#3d1313]/10 transition"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* Add New button */}
+            <button
+              id="add-new-customer-btn"
+              type="button"
+              onClick={resetForm}
+              className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-black transition-all duration-200 hover:opacity-90 hover:scale-[1.02] active:scale-100"
+              style={{
+                background: `linear-gradient(135deg, ${BGL} 0%, ${BG} 100%)`,
+                color: BP,
+                boxShadow: `0 4px 16px ${BG}44`,
+              }}
+            >
+              <span className="text-base">+</span>
+              Add New Customer
+            </button>
           </div>
 
-          <p className="relative z-10 text-[11px]" style={{ color: "rgba(255,255,255,0.2)" }}>
-            Updates in real-time as you type
-          </p>
+          {/* Customer list */}
+          <div className="flex-1 overflow-y-auto py-2">
+            {filteredProfiles.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                <span className="text-3xl mb-2">🗂️</span>
+                <p className="text-sm font-semibold text-gray-500">
+                  {searchQuery ? "No results found" : "No customers yet"}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {searchQuery ? "Try a different search" : "Add your first customer above"}
+                </p>
+              </div>
+            ) : (
+              filteredProfiles.map(p => {
+                const isActive = editingId === p.id;
+                const badge    = TYPE_BADGE[p.profile_type] ?? TYPE_BADGE.individual;
+
+                return (
+                  <button
+                    key={p.id}
+                    id={`customer-item-${p.id}`}
+                    type="button"
+                    onClick={() => loadProfile(p)}
+                    className={cx(
+                      "w-full text-left px-4 py-3 transition-all duration-150 border-l-4 group",
+                      isActive
+                        ? "border-l-[#3d1313] bg-white shadow-sm"
+                        : "border-l-transparent hover:bg-yellow-50"
+                    )}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Avatar / initial */}
+                      <div
+                        className="shrink-0 flex h-9 w-9 items-center justify-center rounded-full text-sm font-black overflow-hidden"
+                        style={{
+                          backgroundColor: isActive ? BP : `${BP}18`,
+                          color: isActive ? BG : BP,
+                          border: isActive ? `2px solid ${BG}` : "2px solid transparent",
+                        }}
+                      >
+                        {p.avatar_url ? (
+                          <img
+                            src={p.avatar_url}
+                            alt=""
+                            className="w-full h-full object-cover rounded-full"
+                          />
+                        ) : (
+                          p.name.charAt(0).toUpperCase()
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className={cx(
+                            "text-sm font-bold truncate",
+                            isActive ? "text-[#3d1313]" : "text-gray-800"
+                          )}
+                        >
+                          {p.name}
+                        </p>
+                        <p className="text-xs text-gray-400 truncate">
+                          /p/{p.slug}
+                        </p>
+                      </div>
+
+                      {/* Type badge */}
+                      <span
+                        className="shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                        style={{ backgroundColor: badge.bg, color: badge.text }}
+                      >
+                        {badge.emoji}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
         </aside>
 
-        {/* ─── RIGHT PANEL: Pure White Grid Workspace ───────────────────────── */}
+        {/* ─── CENTER: Card Builder Form (White) ───────────────────────────── */}
         <main
-          className="flex-1 overflow-y-auto pb-36"
+          id="card-builder-form"
+          className={cx(
+            "flex-1 overflow-y-auto pb-36",
+            mobileView === "form" ? "flex flex-col" : "hidden lg:flex lg:flex-col"
+          )}
           style={{
             backgroundColor: "#ffffff",
             backgroundImage:
-              "linear-gradient(rgba(61,19,19,0.04) 1px, transparent 1px), " +
-              "linear-gradient(90deg, rgba(61,19,19,0.04) 1px, transparent 1px)",
+              "linear-gradient(rgba(61,19,19,0.03) 1px, transparent 1px), " +
+              "linear-gradient(90deg, rgba(61,19,19,0.03) 1px, transparent 1px)",
             backgroundSize: "24px 24px",
           }}
         >
-          <div className="mx-auto max-w-lg px-6 pt-10">
+          <div className="mx-auto w-full max-w-lg px-6 pt-8">
+
+            {/* Mobile back button */}
+            <button
+              type="button"
+              onClick={() => setMobileView("list")}
+              className="lg:hidden mb-4 flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-800 transition"
+            >
+              ← Back to List
+            </button>
 
             {/* Page heading */}
-            <div className="mb-8">
-              <h1 className="text-2xl font-black tracking-tight" style={{ color: BP }}>
-                Create your{" "}
-                <span style={{ color: BG }}>Daris NFC</span>{" "}
-                card
-              </h1>
-              <p className="mt-1.5 text-sm text-gray-500">
-                Fill in your details below. Your card goes live instantly after saving.
+            <div className="mb-7">
+              <div className="flex items-center gap-3 mb-1">
+                <h1 className="text-2xl font-black tracking-tight" style={{ color: BP }}>
+                  {editingId ? (
+                    <>
+                      Edit{" "}
+                      <span style={{ color: BG }}>{card.name || "Profile"}</span>
+                    </>
+                  ) : (
+                    <>
+                      Create your{" "}
+                      <span style={{ color: BG }}>Daris NFC</span>{" "}
+                      card
+                    </>
+                  )}
+                </h1>
+                {editingId && (
+                  <span
+                    className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shrink-0"
+                    style={{ backgroundColor: `${BG}20`, color: BP, border: `1px solid ${BG}50` }}
+                  >
+                    Editing
+                  </span>
+                )}
+              </div>
+              <p className="text-sm text-gray-500">
+                {editingId
+                  ? `Editing /p/${card.slug || "…"} — changes save to Supabase instantly.`
+                  : "Fill in the details below. Your card goes live the moment you save."}
               </p>
             </div>
 
@@ -368,11 +692,33 @@ export default function AdminProfileForm() {
             {error && (
               <div className="mb-6 flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 <span className="text-base">⚠️</span>
-                <span>{error}</span>
+                <span className="flex-1">{error}</span>
                 <button
                   type="button"
                   onClick={() => setError("")}
-                  className="ml-auto text-red-400 hover:text-red-600"
+                  className="text-red-400 hover:text-red-600 font-bold"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
+            {/* Toast */}
+            {toast && (
+              <div
+                className={cx(
+                  "mb-6 flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm",
+                  toast.type === "success"
+                    ? "border-green-200 bg-green-50 text-green-700"
+                    : "border-red-200 bg-red-50 text-red-700"
+                )}
+              >
+                <span className="text-base">{toast.type === "success" ? "✅" : "⚠️"}</span>
+                <span className="flex-1">{toast.message}</span>
+                <button
+                  type="button"
+                  onClick={() => setToast(null)}
+                  className="text-gray-400 hover:text-gray-600 font-bold"
                 >
                   ×
                 </button>
@@ -380,8 +726,11 @@ export default function AdminProfileForm() {
             )}
 
             {/* Mobile-only preview */}
-            <div className="mb-8 overflow-hidden rounded-3xl shadow-2xl lg:hidden">
-              <div className="relative h-64" style={{ background: `linear-gradient(145deg, ${BP} 0%, #1a0808 100%)` }}>
+            <div className="mb-8 overflow-hidden rounded-3xl shadow-2xl xl:hidden">
+              <div
+                className="relative h-64"
+                style={{ background: `linear-gradient(145deg, ${BP} 0%, #1a0808 100%)` }}
+              >
                 <div
                   className="absolute inset-2 overflow-hidden rounded-2xl bg-white"
                   style={{ border: `4px solid ${BG}55` }}
@@ -393,7 +742,7 @@ export default function AdminProfileForm() {
               </div>
             </div>
 
-            {/* ── SECTION: Card Type ───────────────────────────────────────── */}
+            {/* ── SECTION: Card Type ─────────────────────────────────────── */}
             <SectionGroup title="Card Type">
               <div className="grid grid-cols-5 gap-2">
                 {PROFILE_TYPES.map(({ value, label, emoji }) => {
@@ -418,7 +767,6 @@ export default function AdminProfileForm() {
                   );
                 })}
               </div>
-              {/* Avatar source hint */}
               <div
                 className="mt-3 flex items-center gap-2 rounded-xl px-3 py-2"
                 style={{ backgroundColor: `${BG}12`, border: `1px solid ${BG}30` }}
@@ -432,47 +780,45 @@ export default function AdminProfileForm() {
               </div>
             </SectionGroup>
 
-            {/* ── SECTION: Images ─────────────────────────────────────────── */}
+            {/* ── SECTION: Images ──────────────────────────────────────── */}
             <SectionGroup title="Add Images">
               <div className="grid grid-cols-3 gap-3">
-                {/* Primary avatar upload — dynamically labeled */}
                 <ImageUploadBtn
                   label={isBusinessType ? "Company Logo ★" : "Profile Picture ★"}
                   icon={isBusinessType ? "🏢" : "👤"}
-                  isUploading={uploading[isBusinessType ? "logoUrl" : "avatarUrl"]}
+                  isUploading={!!uploading[isBusinessType ? "logoUrl" : "avatarUrl"]}
                   imageUrl={isBusinessType ? card.logoUrl : card.avatarUrl}
-                  onUpload={(e) => handleFileUpload(e, isBusinessType ? "logoUrl" : "avatarUrl")}
+                  onUpload={e => handleFileUpload(e, isBusinessType ? "logoUrl" : "avatarUrl")}
                   highlight
                 />
                 <ImageUploadBtn
                   label="Cover Photo"
                   icon="🖼️"
-                  isUploading={uploading.coverUrl}
+                  isUploading={!!uploading.coverUrl}
                   imageUrl={card.coverUrl}
-                  onUpload={(e) => handleFileUpload(e, "coverUrl")}
+                  onUpload={e => handleFileUpload(e, "coverUrl")}
                 />
-                {/* Secondary upload: profile pic for business, logo already primary */}
                 {isBusinessType ? (
                   <ImageUploadBtn
                     label="Profile Photo"
                     icon="👤"
-                    isUploading={uploading.avatarUrl}
+                    isUploading={!!uploading.avatarUrl}
                     imageUrl={card.avatarUrl}
-                    onUpload={(e) => handleFileUpload(e, "avatarUrl")}
+                    onUpload={e => handleFileUpload(e, "avatarUrl")}
                   />
                 ) : (
                   <ImageUploadBtn
                     label="Company Logo"
                     icon="🏢"
-                    isUploading={uploading.logoUrl}
+                    isUploading={!!uploading.logoUrl}
                     imageUrl={card.logoUrl}
-                    onUpload={(e) => handleFileUpload(e, "logoUrl")}
+                    onUpload={e => handleFileUpload(e, "logoUrl")}
                   />
                 )}
               </div>
             </SectionGroup>
 
-            {/* ── SECTION: Brand ──────────────────────────────────────────── */}
+            {/* ── SECTION: Brand ────────────────────────────────────────── */}
             <SectionGroup title="Brand">
               <ExpandableField
                 id="brandColor" icon="🎨" label="Brand Colour"
@@ -538,12 +884,17 @@ export default function AdminProfileForm() {
                   />
                 </div>
                 <p className="mt-2 text-xs text-gray-400">
-                  Leave blank to auto-generate from your name.
+                  Leave blank to auto-generate from name.{" "}
+                  {editingId && (
+                    <span className="font-semibold text-amber-600">
+                      ⚠ Changing the slug will break existing NFC card links!
+                    </span>
+                  )}
                 </p>
               </ExpandableField>
             </SectionGroup>
 
-            {/* ── SECTION: Personal ───────────────────────────────────────── */}
+            {/* ── SECTION: Personal ─────────────────────────────────────── */}
             <SectionGroup title="Personal">
               <ExpandableField
                 id="name" icon="👤" label="Full Name *"
@@ -606,7 +957,7 @@ export default function AdminProfileForm() {
               </ExpandableField>
             </SectionGroup>
 
-            {/* ── SECTION: Contact ─────────────────────────────────────────── */}
+            {/* ── SECTION: Contact ──────────────────────────────────────── */}
             <SectionGroup title="Contact">
               <ExpandableField
                 id="email" icon="✉️" label="Email Address"
@@ -653,7 +1004,7 @@ export default function AdminProfileForm() {
               </ExpandableField>
             </SectionGroup>
 
-            {/* ── SECTION: Social & Messaging ─────────────────────────────── */}
+            {/* ── SECTION: Social & Messaging ───────────────────────────── */}
             <SectionGroup title="Social & Messaging">
               {SOCIAL_FIELDS.map(({ key, Icon, iconBg, label, placeholder }) => (
                 <ExpandableField
@@ -684,7 +1035,7 @@ export default function AdminProfileForm() {
               ))}
             </SectionGroup>
 
-            {/* ── SECTION: Business / Custom CTAs ─────────────────────────── */}
+            {/* ── SECTION: Custom CTAs ──────────────────────────────────── */}
             <SectionGroup title="Business">
               <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
                 <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3.5">
@@ -743,16 +1094,62 @@ export default function AdminProfileForm() {
 
           </div>
         </main>
+
+        {/* ─── RIGHT: Live Phone Preview (White, sticky) ───────────────────── */}
+        <aside
+          id="live-preview-panel"
+          className="hidden xl:flex shrink-0 w-72 flex-col items-center justify-center gap-5 overflow-hidden"
+          style={{
+            height: "calc(100vh - 4rem)",
+            position: "sticky",
+            top: "4rem",
+            backgroundColor: "#ffffff",
+            borderLeft: "1px solid #e5e7eb",
+            background:
+              "linear-gradient(145deg, #f8f8f8 0%, #ffffff 50%, #f9fafb 100%)",
+          }}
+        >
+          {/* Subtle decorative blobs */}
+          <div
+            className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full"
+            style={{ background: `radial-gradient(circle, ${BG}12 0%, transparent 70%)` }}
+          />
+          <div
+            className="pointer-events-none absolute -bottom-12 -left-12 h-48 w-48 rounded-full"
+            style={{ background: `radial-gradient(circle, ${BP}08 0%, transparent 70%)` }}
+          />
+
+          <p
+            className="relative z-10 text-[10px] font-black uppercase tracking-[0.3em] text-gray-400"
+          >
+            Live Preview
+          </p>
+
+          <div className="relative z-10">
+            <PhonePreview card={card} />
+          </div>
+
+          <p className="relative z-10 text-[11px] text-gray-300">
+            Updates in real-time as you type
+          </p>
+        </aside>
+
       </div>
 
-      {/* ═══ FLOATING SAVE BUTTON ════════════════════════════════════════════ */}
-      <div className="pointer-events-none fixed bottom-0 left-0 right-0 z-50 flex justify-end px-6 py-5 lg:left-[40%]">
-        {/* White fade matching right panel */}
+      {/* ═══ FLOATING SAVE BUTTON ══════════════════════════════════════════════ */}
+      <div className="pointer-events-none fixed bottom-0 z-50 flex justify-end px-6 py-5"
+        style={{
+          left: 0,
+          right: 0,
+          // On desktop, offset left by the sidebar width so button stays over form area
+        }}
+      >
         <div
           className="pointer-events-none absolute inset-x-0 bottom-0 h-28"
           style={{ background: "linear-gradient(to top, rgba(255,255,255,1) 60%, transparent)" }}
         />
         <button
+          id="save-publish-btn"
           type="button"
           onClick={handleSave}
           disabled={isPending}
@@ -766,12 +1163,12 @@ export default function AdminProfileForm() {
           {isPending ? (
             <>
               <Spinner />
-              <span>Saving…</span>
+              <span>{editingId ? "Updating…" : "Saving…"}</span>
             </>
           ) : (
             <>
               <span className="text-base">✦</span>
-              <span>Save &amp; Publish</span>
+              <span>{editingId ? "Save Changes" : "Save & Publish"}</span>
             </>
           )}
         </button>
@@ -869,7 +1266,7 @@ function PhonePreview({ card }: { card: CardData }) {
           ].join(", "),
         }}
       >
-        {/* Screen — pure white */}
+        {/* Screen */}
         <div className="absolute inset-0 overflow-hidden rounded-[37px] bg-white">
           {/* Notch bar */}
           <div
@@ -890,45 +1287,40 @@ function PhonePreview({ card }: { card: CardData }) {
 
       {/* Phone hardware buttons */}
       <div className="absolute rounded-r-sm" style={{ right: -9, top: 110, width: 5, height: 52, backgroundColor: "#222" }} />
-      <div className="absolute rounded-l-sm" style={{ left: -9, top: 80, width: 5, height: 34, backgroundColor: "#222" }} />
+      <div className="absolute rounded-l-sm" style={{ left: -9, top: 80,  width: 5, height: 34, backgroundColor: "#222" }} />
       <div className="absolute rounded-l-sm" style={{ left: -9, top: 124, width: 5, height: 34, backgroundColor: "#222" }} />
-      <div className="absolute rounded-l-sm" style={{ left: -9, top: 62, width: 5, height: 16, backgroundColor: "#222" }} />
+      <div className="absolute rounded-l-sm" style={{ left: -9, top: 62,  width: 5, height: 16, backgroundColor: "#222" }} />
     </div>
   );
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   CARD INSIDE PHONE — White screen, burgundy/gold accents
+   CARD INSIDE PHONE
 ═══════════════════════════════════════════════════════════════════════════ */
 
 function CardInPhone({ card, compact }: { card: CardData; compact: boolean }) {
   const isBusinessType = LOGO_TYPES.includes(card.profileType);
-  // Dynamic avatar source: business/hotel → logo; individual → profile pic
-  const avatarSrc = isBusinessType ? card.logoUrl : card.avatarUrl;
-  const initial = card.name ? card.name.charAt(0).toUpperCase() : "?";
-  const coverH = compact ? 72 : 108;
-  const avatarS = compact ? 48 : 64;
-  const avatarOffset = Math.floor(avatarS / 2);
+  const avatarSrc      = isBusinessType ? card.logoUrl : card.avatarUrl;
+  const initial        = card.name ? card.name.charAt(0).toUpperCase() : "?";
+  const coverH         = compact ? 72 : 108;
+  const avatarS        = compact ? 48 : 64;
+  const avatarOffset   = Math.floor(avatarS / 2);
 
   return (
     <div className="min-h-full w-full pb-6 relative bg-white">
 
-      {/* Cover — clean flat color or image, no overlays */}
+      {/* Cover */}
       <div
         className="relative w-full overflow-hidden"
-        style={{
-          height: coverH,
-          backgroundColor: card.brandColor,
-        }}
+        style={{ height: coverH, backgroundColor: card.brandColor }}
       >
         {card.coverUrl && (
           <img src={card.coverUrl} className="absolute inset-0 w-full h-full object-cover" alt="Cover" />
         )}
-        {/* Notch spacer */}
         <div style={{ height: compact ? 0 : 26 }} />
       </div>
 
-      {/* Single circular avatar — dynamic source */}
+      {/* Avatar */}
       <div className="flex justify-center relative z-10" style={{ marginTop: -avatarOffset }}>
         <div
           className="flex items-center justify-center overflow-hidden rounded-full bg-white"
@@ -959,16 +1351,12 @@ function CardInPhone({ card, compact }: { card: CardData; compact: boolean }) {
 
       {/* Identity */}
       <div className="mt-2 px-4 text-center">
-        <p
-          className="font-black leading-tight"
-          style={{ fontSize: compact ? 12 : 14, color: BP }}
-        >
+        <p className="font-black leading-tight" style={{ fontSize: compact ? 12 : 14, color: BP }}>
           {card.name || <span style={{ color: "#ccc" }}>Your Name</span>}
         </p>
         {card.jobTitle && (
           <p className="mt-0.5 text-gray-500" style={{ fontSize: compact ? 8 : 9 }}>
-            {card.jobTitle}
-            {card.company ? ` · ${card.company}` : ""}
+            {card.jobTitle}{card.company ? ` · ${card.company}` : ""}
           </p>
         )}
         {!card.jobTitle && card.company && (
@@ -994,10 +1382,10 @@ function CardInPhone({ card, compact }: { card: CardData; compact: boolean }) {
       {/* Action icon buttons */}
       {!compact && (card.phone || card.email || card.website || card.whatsapp) && (
         <div className="mt-4 flex justify-center gap-3 px-4 flex-wrap">
-          {card.phone && <PhoneBtn icon="📞" label="Call" color={card.brandColor} />}
-          {card.email && <PhoneBtn icon="✉️" label="Email" color={card.brandColor} />}
-          {card.website && <PhoneBtn icon="🌐" label="Web" color={card.brandColor} />}
-          {card.whatsapp && <PhoneBtn icon="💬" label="Chat" color={card.brandColor} />}
+          {card.phone    && <PhoneBtn icon="📞" label="Call"  color={card.brandColor} />}
+          {card.email    && <PhoneBtn icon="✉️" label="Email" color={card.brandColor} />}
+          {card.website  && <PhoneBtn icon="🌐" label="Web"   color={card.brandColor} />}
+          {card.whatsapp && <PhoneBtn icon="💬" label="Chat"  color={card.brandColor} />}
         </div>
       )}
 
@@ -1006,17 +1394,17 @@ function CardInPhone({ card, compact }: { card: CardData; compact: boolean }) {
         <div className="mx-4 mt-4 border-t border-gray-100" />
       )}
 
-      {/* Social dots — original brand icons */}
+      {/* Social dots */}
       {!compact && (card.linkedin || card.instagram || card.twitter || card.facebook || card.tiktok || card.telegram || card.youtube) && (
         <div className="mt-3 flex justify-center gap-2 px-4 flex-wrap">
-          {card.linkedin && <SocialDot Icon={FaLinkedinIn} bg={card.brandColor} />}
-          {card.instagram && <SocialDot Icon={FaInstagram} bg={card.brandColor} />}
-          {card.twitter && <SocialDot Icon={FaXTwitter} bg={card.brandColor} />}
-          {card.facebook && <SocialDot Icon={FaFacebookF} bg={card.brandColor} />}
-          {card.youtube && <SocialDot Icon={FaYoutube} bg={card.brandColor} />}
-          {card.tiktok && <SocialDot Icon={FaTiktok} bg={card.brandColor} />}
-          {card.whatsapp && <SocialDot Icon={FaWhatsapp} bg={card.brandColor} />}
-          {card.telegram && <SocialDot Icon={FaTelegram} bg={card.brandColor} />}
+          {card.linkedin  && <SocialDot Icon={FaLinkedinIn} bg={card.brandColor} />}
+          {card.instagram && <SocialDot Icon={FaInstagram}  bg={card.brandColor} />}
+          {card.twitter   && <SocialDot Icon={FaXTwitter}   bg={card.brandColor} />}
+          {card.facebook  && <SocialDot Icon={FaFacebookF}  bg={card.brandColor} />}
+          {card.youtube   && <SocialDot Icon={FaYoutube}    bg={card.brandColor} />}
+          {card.tiktok    && <SocialDot Icon={FaTiktok}     bg={card.brandColor} />}
+          {card.whatsapp  && <SocialDot Icon={FaWhatsapp}   bg={card.brandColor} />}
+          {card.telegram  && <SocialDot Icon={FaTelegram}   bg={card.brandColor} />}
         </div>
       )}
 
@@ -1064,9 +1452,7 @@ function PhoneBtn({ icon, label, color }: { icon: string; label: string; color: 
       >
         {icon}
       </div>
-      <span className="font-semibold text-gray-500" style={{ fontSize: 8 }}>
-        {label}
-      </span>
+      <span className="font-semibold text-gray-500" style={{ fontSize: 8 }}>{label}</span>
     </div>
   );
 }
@@ -1102,7 +1488,6 @@ function SectionGroup({ title, children }: { title: string; children: React.Reac
   );
 }
 
-/** Expandable pill field — accepts React.ReactNode as icon (string emoji or JSX) */
 function ExpandableField({
   id, icon, label, value, isOpen, onToggle, children,
 }: {
@@ -1121,7 +1506,6 @@ function ExpandableField({
         onClick={onToggle}
         className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-gray-50/80 focus:outline-none"
       >
-        {/* Icon bubble */}
         <div
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full overflow-hidden text-base border border-gray-100"
           style={{ backgroundColor: "#f9fafb" }}
@@ -1129,7 +1513,6 @@ function ExpandableField({
           {icon}
         </div>
 
-        {/* Label + value preview */}
         <div className="min-w-0 flex-1">
           <span className="text-sm font-semibold text-gray-800">{label}</span>
           {value && !isOpen && (
@@ -1137,17 +1520,16 @@ function ExpandableField({
           )}
         </div>
 
-        {/* Toggle */}
         <div
           className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-sm font-black transition-all duration-300"
           style={
             isOpen
               ? {
-                background: `linear-gradient(135deg, ${BGL} 0%, ${BG} 100%)`,
-                borderColor: BG,
-                color: BP,
-                transform: "rotate(45deg)",
-              }
+                  background: `linear-gradient(135deg, ${BGL} 0%, ${BG} 100%)`,
+                  borderColor: BG,
+                  color: BP,
+                  transform: "rotate(45deg)",
+                }
               : { borderColor: "#d1d5db", color: "#9ca3af" }
           }
         >
