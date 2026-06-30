@@ -12,6 +12,7 @@ import {
   FaWhatsapp,
   FaTelegram,
 } from "react-icons/fa6";
+import { MapPin } from "lucide-react";
 
 const BURGUNDY = "#3d1313";
 const GOLD     = "#d4af37";
@@ -88,6 +89,8 @@ export default function PublicCard({ profile }: { profile: Profile }) {
             style={{ background: `linear-gradient(to right, transparent, ${GOLD}, transparent)` }}
           />
 
+
+
           {profile.bio && (
             <p className="text-sm leading-relaxed whitespace-pre-wrap text-gray-600 px-2">
               {profile.bio}
@@ -102,12 +105,24 @@ export default function PublicCard({ profile }: { profile: Profile }) {
           {ci?.website && <PhoneBtn href={ci.website} icon="🌐" label="Web" color={brandColor} />}
         </div>
 
-        {/* ── SOCIAL LINKS ── */}
-        {profile.social_links && profile.social_links.length > 0 && (
+        {/* ── SOCIAL LINKS & LOCATION ── */}
+        {((profile.social_links && profile.social_links.length > 0) || ci?.address) && (
           <div className="mt-8 px-6">
             <div className="border-t border-gray-100 mb-6" />
             <div className="flex justify-center gap-4 flex-wrap">
-              {profile.social_links.map((link, i) => {
+              {ci?.address && (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ci.address)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex h-12 w-12 items-center justify-center rounded-full shadow-sm transition-transform hover:scale-110"
+                  style={{ backgroundColor: brandColor }}
+                  title="View on Maps"
+                >
+                  <MapPin size={22} color="#ffffff" />
+                </a>
+              )}
+              {profile.social_links?.map((link, i) => {
                 const p = link.platform.toLowerCase();
                 let Icon = FaFacebookF;
 

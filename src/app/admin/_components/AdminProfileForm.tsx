@@ -44,6 +44,7 @@ import {
   FaWhatsapp,
   FaTelegram,
 } from "react-icons/fa6";
+import { MapPin } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TYPES
@@ -1424,13 +1425,23 @@ function CardInPhone({ card, compact }: { card: CardData; compact: boolean }) {
       )}
 
       {/* Social divider */}
-      {!compact && (card.linkedin || card.instagram || card.twitter || card.facebook || card.tiktok || card.telegram || card.youtube) && (
+      {!compact && (card.linkedin || card.instagram || card.twitter || card.facebook || card.tiktok || card.telegram || card.youtube || card.address) && (
         <div className="mx-4 mt-4 border-t border-gray-100" />
       )}
 
       {/* Social dots */}
-      {!compact && (card.linkedin || card.instagram || card.twitter || card.facebook || card.tiktok || card.telegram || card.youtube) && (
+      {!compact && (card.linkedin || card.instagram || card.twitter || card.facebook || card.tiktok || card.telegram || card.youtube || card.address) && (
         <div className="mt-3 flex justify-center gap-2 px-4 flex-wrap">
+          {card.address && (
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(card.address)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block transition-transform hover:scale-110"
+            >
+              <SocialDot Icon={MapPin as any} bg={card.brandColor} />
+            </a>
+          )}
           {card.linkedin  && <SocialDot Icon={FaLinkedinIn} bg={card.brandColor} />}
           {card.instagram && <SocialDot Icon={FaInstagram}  bg={card.brandColor} />}
           {card.twitter   && <SocialDot Icon={FaXTwitter}   bg={card.brandColor} />}
