@@ -317,6 +317,18 @@ export default function AdminDashboard({ initialProfiles }: AdminDashboardProps)
     setTimeout(() => setToast(null), 4000);
   };
 
+  /* ── Copy Link ── */
+  const copyProfileLink = async () => {
+    if (!card.slug) return;
+    const url = `${window.location.origin}/p/${card.slug}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast("success", "Link copied to clipboard!");
+    } catch (err) {
+      showToast("error", "Failed to copy link");
+    }
+  };
+
   /* ── File Upload ── */
   const handleFileUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -687,6 +699,28 @@ export default function AdminDashboard({ initialProfiles }: AdminDashboardProps)
                   : "Fill in the details below. Your card goes live the moment you save."}
               </p>
             </div>
+
+            {/* Copy Link Section (Only in Edit Mode) */}
+            {editingId && card.slug && (
+              <div className="mb-6 flex items-center justify-between gap-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">
+                    Public Profile Link
+                  </p>
+                  <p className="truncate text-sm font-semibold text-gray-800" style={{ color: BP }}>
+                    {typeof window !== "undefined" ? window.location.origin : ""}/p/{card.slug}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={copyProfileLink}
+                  className="flex shrink-0 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-gray-700 shadow-sm transition hover:bg-gray-100 active:scale-95"
+                >
+                  <span className="text-sm">📋</span>
+                  Copy Link
+                </button>
+              </div>
+            )}
 
             {/* Error banner */}
             {error && (
