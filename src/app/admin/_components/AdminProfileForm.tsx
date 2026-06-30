@@ -1333,6 +1333,23 @@ function PhonePreview({ card }: { card: CardData }) {
    CARD INSIDE PHONE
 ═══════════════════════════════════════════════════════════════════════════ */
 
+function formatSocialUrl(platform: string, value: string) {
+  if (!value) return value;
+  if (value.startsWith('http')) return value;
+
+  const p = platform.toLowerCase();
+  if (p.includes('telegram')) {
+    return `https://t.me/${value.replace('@', '')}`;
+  }
+  if (p.includes('tiktok')) {
+    return `https://tiktok.com/@${value.replace('@', '')}`;
+  }
+  if (p.includes('youtube')) {
+    return `https://youtube.com/${value.startsWith('@') ? value : '@' + value}`;
+  }
+  return value;
+}
+
 function CardInPhone({ card, compact }: { card: CardData; compact: boolean }) {
   const isBusinessType = LOGO_TYPES.includes(card.profileType);
   const avatarSrc      = isBusinessType ? card.logoUrl : card.avatarUrl;
@@ -1442,14 +1459,46 @@ function CardInPhone({ card, compact }: { card: CardData; compact: boolean }) {
               <SocialDot Icon={MapPin as any} bg={card.brandColor} />
             </a>
           )}
-          {card.linkedin  && <SocialDot Icon={FaLinkedinIn} bg={card.brandColor} />}
-          {card.instagram && <SocialDot Icon={FaInstagram}  bg={card.brandColor} />}
-          {card.twitter   && <SocialDot Icon={FaXTwitter}   bg={card.brandColor} />}
-          {card.facebook  && <SocialDot Icon={FaFacebookF}  bg={card.brandColor} />}
-          {card.youtube   && <SocialDot Icon={FaYoutube}    bg={card.brandColor} />}
-          {card.tiktok    && <SocialDot Icon={FaTiktok}     bg={card.brandColor} />}
-          {card.whatsapp  && <SocialDot Icon={FaWhatsapp}   bg={card.brandColor} />}
-          {card.telegram  && <SocialDot Icon={FaTelegram}   bg={card.brandColor} />}
+          {card.linkedin  && (
+            <a href={formatSocialUrl('linkedin', card.linkedin)} target="_blank" rel="noopener noreferrer" className="inline-block transition-transform hover:scale-110">
+              <SocialDot Icon={FaLinkedinIn} bg={card.brandColor} />
+            </a>
+          )}
+          {card.instagram && (
+            <a href={formatSocialUrl('instagram', card.instagram)} target="_blank" rel="noopener noreferrer" className="inline-block transition-transform hover:scale-110">
+              <SocialDot Icon={FaInstagram} bg={card.brandColor} />
+            </a>
+          )}
+          {card.twitter   && (
+            <a href={formatSocialUrl('twitter', card.twitter)} target="_blank" rel="noopener noreferrer" className="inline-block transition-transform hover:scale-110">
+              <SocialDot Icon={FaXTwitter} bg={card.brandColor} />
+            </a>
+          )}
+          {card.facebook  && (
+            <a href={formatSocialUrl('facebook', card.facebook)} target="_blank" rel="noopener noreferrer" className="inline-block transition-transform hover:scale-110">
+              <SocialDot Icon={FaFacebookF} bg={card.brandColor} />
+            </a>
+          )}
+          {card.youtube   && (
+            <a href={formatSocialUrl('youtube', card.youtube)} target="_blank" rel="noopener noreferrer" className="inline-block transition-transform hover:scale-110">
+              <SocialDot Icon={FaYoutube} bg={card.brandColor} />
+            </a>
+          )}
+          {card.tiktok    && (
+            <a href={formatSocialUrl('tiktok', card.tiktok)} target="_blank" rel="noopener noreferrer" className="inline-block transition-transform hover:scale-110">
+              <SocialDot Icon={FaTiktok} bg={card.brandColor} />
+            </a>
+          )}
+          {card.whatsapp  && (
+            <a href={formatSocialUrl('whatsapp', card.whatsapp)} target="_blank" rel="noopener noreferrer" className="inline-block transition-transform hover:scale-110">
+              <SocialDot Icon={FaWhatsapp} bg={card.brandColor} />
+            </a>
+          )}
+          {card.telegram  && (
+            <a href={formatSocialUrl('telegram', card.telegram)} target="_blank" rel="noopener noreferrer" className="inline-block transition-transform hover:scale-110">
+              <SocialDot Icon={FaTelegram} bg={card.brandColor} />
+            </a>
+          )}
         </div>
       )}
 

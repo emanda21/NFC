@@ -135,10 +135,21 @@ export default function PublicCard({ profile }: { profile: Profile }) {
                 else if (p.includes("whatsapp"))  { Icon = FaWhatsapp; }
                 else if (p.includes("telegram"))  { Icon = FaTelegram; }
 
+                let finalUrl = link.url;
+                if (finalUrl && !finalUrl.startsWith('http')) {
+                  if (p.includes('telegram')) {
+                    finalUrl = `https://t.me/${finalUrl.replace('@', '')}`;
+                  } else if (p.includes('tiktok')) {
+                    finalUrl = `https://tiktok.com/@${finalUrl.replace('@', '')}`;
+                  } else if (p.includes('youtube')) {
+                    finalUrl = `https://youtube.com/${finalUrl.startsWith('@') ? finalUrl : '@' + finalUrl}`;
+                  }
+                }
+
                 return (
                   <a
                     key={i}
-                    href={link.url}
+                    href={finalUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex h-12 w-12 items-center justify-center rounded-full shadow-sm transition-transform hover:scale-110"
