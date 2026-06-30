@@ -377,7 +377,7 @@ export default function AdminDashboard({ initialProfiles }: AdminDashboardProps)
       contact_info: Object.keys(ci).length ? ci : null,
       social_links: sl.length ? sl : null,
       custom_links: cl.length ? cl : null,
-      slug:         card.slug?.trim() || undefined,
+      slug:         card.slug?.trim() || "",
     };
   };
 
